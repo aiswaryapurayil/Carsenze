@@ -1,20 +1,20 @@
 package com.carsenze;
 
-import android.content.Context;
 import android.app.Activity;
 import android.os.Bundle;
+import android.os.IBinder;
+import android.os.RemoteException;
+import android.os.ServiceManager;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
-import android.widget.EditText;
 import android.widget.TextView;
-import android.util.Log;
-import android.os.ServiceManager;
-import android.os.IBinder;
+
 import android.hardware.carsenze.ICarsenze;
 
 public class Carsenze extends Activity {
-    private static final String TAG = "Carsenze";
-    private static final String IINVCASE_AIDL_INTERFACE = "android.hardware.carsenze.ICarsenze/default";
+    private static final String TAG = "Carsenze_System_APP";
+    private static final String ICARSENZE_AIDL_INTERFACE = "android.hardware.carsenze.ICarsenze/default";
     private static ICarsenze carsenzeAJ; // AIDL Java
 
     @Override
@@ -22,47 +22,15 @@ public class Carsenze extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
-        Button fetch = (Button)findViewById(R.id.button);
-        fetch.setOnClickListener(new View.OnClickListener() {
+        Button btn = findViewById(R.id.button);
+        btn.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
-                TextView mem = (EditText)findViewById(R.id.Memory);
-                TextView cpu = (EditText)findViewById(R.id.CPU);
-                TextView network = (EditText)findViewById(R.id.Network);
-                String ret = "";
-
-                if(carsenzeAJ != null) {
-                    try {
-                        ret = carsenzeAJ.getMemStats(txt);
-                        Log.d(TAG, "App: get= " + ret);
-                        mem.setText(ret);
-                    } catch (android.os.RemoteException e) {
-                        Log.e(TAG, "ICarsenze-AIDL error", e);
-                    }
-                }
-
-                if(carsenzeAJ != null) {
-                    try {
-                        ret = carsenzeAJ.getCpuStats(txt);
-                        Log.d(TAG, "App: get= " + ret);
-                        cpu.setText(ret);
-                    } catch (android.os.RemoteException e) {
-                        Log.e(TAG, "ICarsenze-AIDL error", e);
-                    }
-                }
-
-                if(carsenzeAJ != null) {
-                    try {
-                        ret = carsenzeAJ.getNetworkStats(txt);
-                        Log.d(TAG, "App: get= " + ret);
-                        network.setText(ret);
-                    } catch (android.os.RemoteException e) {
-                        Log.e(TAG, "ICarsenze-AIDL error", e);
-                    }
-                }
+                updateStats();
             }
         });
 
+        // Attempt to bind to the AIDL service
         IBinder binder = ServiceManager.getService(ICARSENZE_AIDL_INTERFACE);
         if (binder == null) {
             Log.e(TAG, "Getting " + ICARSENZE_AIDL_INTERFACE + " service daemon binder failed!");
@@ -73,6 +41,33 @@ public class Carsenze extends Activity {
             } else {
                 Log.d(TAG, "ICarsenze AIDL daemon interface is binded!");
             }
+        }
+        // Update stats initially
+        updateStats();
+    }
+
+    private void updateStats() {
+        try {
+            // Retrieve stats from AIDL service
+            Log.d(TAG,"**-Requesting for CPU Information-**");
+            String cpuStats = carsenzeAJ.getCpuStats();
+            Log.d(TAG,"**-Requesting for Memory Information-**");
+            String memoryStats = carsenzeAJ.getMemoryStats();
+            Log.d(TAG,"**-Requesting for Network Information-**");
+            String networkStats = carsenzeAJ.getNetworkStats();
+
+            // Update TextViews with retrieved stats
+            TextView cpuTextView = findViewById(R.id.cpu);
+            cpuTextView.setText("CPU: " + cpuStats);
+
+            TextView memoryTextView = findViewById(R.id.memory);
+            memoryTextView.setText("Memory: " + memoryStats);
+
+            TextView networkTextView = findViewById(R.id.network);
+            networkTextView.setText("Network: " + networkStats);
+
+        } catch (RemoteException e) {
+            Log.e(TAG, "Error retrieving stats from ICarsenze AIDL service", e);
         }
     }
 }
